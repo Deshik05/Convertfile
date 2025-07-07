@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 
-const db = new Database("./tmp/mydb.sqlite", { create: true });
+const db = new Database("/tmp/mydb.sqlite", { create: true });
 
 if (!db.query("SELECT * FROM sqlite_master WHERE type='table'").get()) {
   db.exec(`
