@@ -16,6 +16,7 @@ import { convert as convertPotrace, properties as propertiesPotrace } from "./po
 import { convert as convertresvg, properties as propertiesresvg } from "./resvg";
 import { convert as convertImage, properties as propertiesImage } from "./vips";
 import { convert as convertxelatex, properties as propertiesxelatex } from "./xelatex";
+import { convert as convertTesseract, properties as propertiesTesseract } from "./Tesseract";
 
 // This should probably be reconstructed so that the functions are not imported instead the functions hook into this to make the converters more modular
 
@@ -58,6 +59,10 @@ const properties: Record<
   vips: {
     properties: propertiesImage,
     converter: convertImage,
+  },
+  tesseract: {
+    properties: propertiesTesseract,
+    converter: convertTesseract,
   },
   libheif: {
     properties: propertiesLibheif,
