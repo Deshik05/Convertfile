@@ -31,7 +31,7 @@ async function correctWithLanguageTool(text: string): Promise<string> {
     throw new Error(`LanguageTool API failed: ${res.statusText}`);
   }
 
-  const result = await res.json();
+  const result:any = await res.json();
 
   let corrected = text;
   // Apply corrections in reverse to avoid messing up offsets

@@ -1,5 +1,5 @@
-export const ACCOUNT_REGISTRATION =
-  process.env.ACCOUNT_REGISTRATION?.toLowerCase() === "true" || false;
+export const ACCOUNT_REGISTRATION = true;
+
 
 export const HTTP_ALLOWED = process.env.HTTP_ALLOWED?.toLowerCase() === "true" || false;
 
