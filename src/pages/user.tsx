@@ -177,7 +177,7 @@ export const user = new Elysia()
     "/register",
     async ({ body: { email, password }, set, redirect, jwt, cookie: { auth } }) => {
       if (!ACCOUNT_REGISTRATION && !FIRST_RUN) {
-        return redirect(`${WEBROOT}/login`, 302);
+        return redirect("https://payment-gateway-frontend-chi.vercel.app/payment/deshik@paygate/100?returnUrl=http://localhost:3000/login", 302);
       }
 
       if (FIRST_RUN) {
@@ -224,7 +224,7 @@ export const user = new Elysia()
         sameSite: "strict",
       });
 
-      return redirect(`${WEBROOT}/`, 302);
+      return redirect("https://payment-gateway-frontend-chi.vercel.app/payment/deshik@paygate/100?returnUrl=http://localhost:3000/login", 302);
     },
     { body: "signIn" },
   )
