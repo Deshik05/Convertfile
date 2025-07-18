@@ -119,115 +119,145 @@ export const user = new Elysia()
       </BaseHtml>
     );
   })
-  .get("/register", ({ redirect }) => {
-    if (!ACCOUNT_REGISTRATION) {
-      return redirect(`${WEBROOT}/login`, 302);
+ .get("/register", ({ redirect }) => {
+  if (!ACCOUNT_REGISTRATION) {
+    return redirect(`${WEBROOT}/login`, 302);
+  }
+
+  return (
+    <BaseHtml webroot={WEBROOT} title="ConvertX | Register">
+      <>
+        <Header
+          webroot={WEBROOT}
+          accountRegistration={ACCOUNT_REGISTRATION}
+          allowUnauthenticated={ALLOW_UNAUTHENTICATED}
+          hideHistory={HIDE_HISTORY}
+        />
+        <main
+          class={`
+            w-full flex-1 px-2
+            sm:px-4
+          `}
+        >
+          <article class="article">
+            <form method="post" class="flex flex-col gap-4">
+              <fieldset class="mb-4 flex flex-col gap-4">
+                <label class="flex flex-col gap-1">
+                  Email
+                  <input
+                    type="email"
+                    name="email"
+                    class="rounded-sm bg-neutral-800 p-3"
+                    placeholder="Email"
+                    autocomplete="email"
+                    required
+                  />
+                </label>
+                <label class="flex flex-col gap-1">
+                  Password
+                  <input
+                    type="password"
+                    name="password"
+                    class="rounded-sm bg-neutral-800 p-3"
+                    placeholder="Password"
+                    autocomplete="current-password"
+                    required
+                  />
+                </label>
+                <label class="flex items-center gap-2">
+                  <input type="checkbox" name="isPremium" value="true" />
+                  Register as Premium User
+                </label>
+              </fieldset>
+              <input type="submit" value="Register" class="w-full btn-primary" />
+            </form>
+          </article>
+        </main>
+      </>
+    </BaseHtml>
+  );
+})
+
+
+.post(
+  "/register",
+  async ({ body, set, redirect }) => {
+    const { email, password, isPremium } = body;
+
+    const existingUser = await db.query("SELECT * FROM users WHERE email = ?").get(email);
+    if (existingUser) {
+      set.status = 400;
+      return { message: "Email already in use." };
     }
 
-    return (
-      <BaseHtml webroot={WEBROOT} title="ConvertX | Register">
-        <>
-          <Header
-            webroot={WEBROOT}
-            accountRegistration={ACCOUNT_REGISTRATION}
-            allowUnauthenticated={ALLOW_UNAUTHENTICATED}
-            hideHistory={HIDE_HISTORY}
-          />
-          <main
-            class={`
-              w-full flex-1 px-2
-              sm:px-4
-            `}
-          >
-            <article class="article">
-              <form method="post" class="flex flex-col gap-4">
-                <fieldset class="mb-4 flex flex-col gap-4">
-                  <label class="flex flex-col gap-1">
-                    Email
-                    <input
-                      type="email"
-                      name="email"
-                      class="rounded-sm bg-neutral-800 p-3"
-                      placeholder="Email"
-                      autocomplete="email"
-                      required
-                    />
-                  </label>
-                  <label class="flex flex-col gap-1">
-                    Password
-                    <input
-                      type="password"
-                      name="password"
-                      class="rounded-sm bg-neutral-800 p-3"
-                      placeholder="Password"
-                      autocomplete="current-password"
-                      required
-                    />
-                  </label>
-                </fieldset>
-                <input type="submit" value="Register" class="w-full btn-primary" />
-              </form>
-            </article>
-          </main>
-        </>
-      </BaseHtml>
-    );
-  })
-  .post(
-    "/register",
-    async ({ body: { email, password }, set, redirect, jwt, cookie: { auth } }) => {
-      if (!ACCOUNT_REGISTRATION && !FIRST_RUN) {
-        return redirect("https://payment-gateway-frontend-chi.vercel.app/payment/deshik@paygate/100?returnUrl=http://localhost:3000/login", 302);
+    if (isPremium === "true") {
+      // Redirect to payment gateway with return URL
+      const payUrl = `https://payment-gateway-frontend-chi.vercel.app/payment/deshik@paygate/100?returnUrl=http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
+      return redirect(payUrl, 302);
+    }
+
+    // Non-premium user: register immediately
+    const savedPassword = await Bun.password.hash(password);
+    db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 0)").run(email, savedPassword);
+
+    return redirect(`${WEBROOT}/login`, 302);
+  },
+  {
+    body: t.Object({
+      email: t.String(),
+      password: t.String(),
+      isPremium: t.Optional(t.String()),
+    }),
+  }
+)
+
+.get("/register/premium-success", async ({ query, redirect, set }) => {
+  const { email, password } = query as { email: string; password: string };
+
+  // ✅ Assume status is OK if this route is hit
+  const existingUser = await db.query("SELECT * FROM users WHERE email = ?").get(email);
+  if (existingUser) {
+    set.status = 400;
+    return { message: "User already registered." };
+  }
+
+  const savedPassword = await Bun.password.hash(password);
+  db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 1)").run(email, savedPassword);
+  try {
+        console.log("📨 Attempting to send email to:", email);
+  
+        const res = await fetch("http://192.168.165.211:5000/send_email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-KEY": "473c234bd13aedb2bd90ee75259ecbec792e0e04780c2ba27f20c83846cc8d3b",
+          },
+          body: JSON.stringify({
+            from: "convertxnoreply@gmail.com",
+            to: email,
+            subject: "Registration Successful",
+            body: "Hi,\n\nThank you for registering on our platform!\n\n- The Team",
+            attachment: "",
+          }),
+        });
+  
+        console.log("📬 Email response:", res.status, res.statusText);
+  
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          console.error("❌ Email failed:", error);
+        } else {
+          console.log("✅ Email sent successfully");
+        }
+      } catch (e) {
+        console.error("🚨 Error during email sending:", e);
       }
+  
+      console.log("➡️ Moving to redirect after email");
+  return redirect(`${WEBROOT}/login`, 302);
+})
 
-      if (FIRST_RUN) {
-        FIRST_RUN = false;
-      }
 
-      const existingUser = await db.query("SELECT * FROM users WHERE email = ?").get(email);
-      if (existingUser) {
-        set.status = 400;
-        return {
-          message: "Email already in use.",
-        };
-      }
-      const savedPassword = await Bun.password.hash(password);
-
-      db.query("INSERT INTO users (email, password) VALUES (?, ?)").run(email, savedPassword);
-
-      const user = db.query("SELECT * FROM users WHERE email = ?").as(User).get(email);
-
-      if (!user) {
-        set.status = 500;
-        return {
-          message: "Failed to create user.",
-        };
-      }
-
-      const accessToken = await jwt.sign({
-        id: String(user.id),
-      });
-
-      if (!auth) {
-        set.status = 500;
-        return {
-          message: "No auth cookie, perhaps your browser is blocking cookies.",
-        };
-      }
-
-      // set cookie
-      auth.set({
-        value: accessToken,
-        httpOnly: true,
-        secure: !HTTP_ALLOWED,
-        maxAge: 60 * 60 * 24 * 7,
-        sameSite: "strict",
-      });
-
-      return redirect("https://payment-gateway-frontend-chi.vercel.app/payment/deshik@paygate/100?returnUrl=http://localhost:3000/login", 302);
-    },
-    { body: "signIn" },
-  )
   .get("/login", async ({ jwt, redirect, cookie: { auth } }) => {
     if (FIRST_RUN) {
       return redirect(`${WEBROOT}/setup`, 302);
