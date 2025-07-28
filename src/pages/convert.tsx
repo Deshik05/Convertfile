@@ -11,7 +11,7 @@ import { userService } from "./user";
 
 export const convert = new Elysia().use(userService).post(
   "/convert",
-  async ({ body, redirect, jwt, cookie: { auth, jobId } }) => {
+  async ({ body, redirect, jwt, cookie: { auth, jobId }, set }) => {
     if (!auth?.value) {
       return redirect(`${WEBROOT}/login`, 302);
     }
@@ -37,7 +37,6 @@ export const convert = new Elysia().use(userService).post(
     const userUploadsDir = `${uploadsDir}${user.id}/${jobId.value}/`;
     const userOutputDir = `${outputDir}${user.id}/${jobId.value}/`;
 
-    // create the output directory
     try {
       await mkdir(userOutputDir, { recursive: true });
     } catch (error) {
@@ -56,6 +55,12 @@ export const convert = new Elysia().use(userService).post(
       return redirect(`${WEBROOT}/`, 302);
     }
 
+    // ✨ Check if Tesseract and User is Not Premium
+    if (converterName === "tesseract" && user.role !== "premium") {
+      set.status = 403;
+      return "Tesseract conversion is available only for premium users.";
+    }
+
     db.query("UPDATE jobs SET num_files = ?1, status = 'pending' WHERE id = ?2").run(
       fileNames.length,
       jobId.value,
@@ -65,7 +70,6 @@ export const convert = new Elysia().use(userService).post(
       "INSERT INTO file_names (job_id, file_name, output_file_name, status) VALUES (?1, ?2, ?3, ?4)",
     );
 
-    // Start the conversion process in the background
     Promise.all(
       fileNames.map(async (fileName) => {
         const filePath = `${userUploadsDir}${fileName}`;
@@ -86,25 +90,21 @@ export const convert = new Elysia().use(userService).post(
           {},
           converterName,
         );
+
         if (jobId.value) {
           query.run(jobId.value, fileName, newFileName, result);
         }
       }),
     )
       .then(() => {
-        // All conversions are done, update the job status to 'completed'
         if (jobId.value) {
           db.query("UPDATE jobs SET status = 'completed' WHERE id = ?1").run(jobId.value);
         }
-
-        // delete all uploaded files in userUploadsDir
-        // rmSync(userUploadsDir, { recursive: true, force: true });
       })
       .catch((error) => {
         console.error("Error in conversion process:", error);
       });
 
-    // Redirect the client immediately
     return redirect(`${WEBROOT}/results/${jobId.value}`, 302);
   },
   {
