@@ -214,7 +214,6 @@ export const user = new Elysia()
 .get("/register/premium-success", async ({ query, redirect, set }) => {
   const { email, password } = query as { email: string; password: string };
 
-  // ✅ Assume status is OK if this route is hit
   const existingUser = await db.query("SELECT * FROM users WHERE email = ?").get(email);
   if (existingUser) {
     set.status = 400;
@@ -223,37 +222,37 @@ export const user = new Elysia()
 
   const savedPassword = await Bun.password.hash(password);
   db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 1)").run(email, savedPassword);
+
   try {
-        console.log("📨 Attempting to send email to:", email);
-  
-        const res = await fetch("http://192.168.165.211:5000/send_email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-API-KEY": "473c234bd13aedb2bd90ee75259ecbec792e0e04780c2ba27f20c83846cc8d3b",
-          },
-          body: JSON.stringify({
-            from: "convertxnoreply@gmail.com",
-            to: email,
-            subject: "Registration Successful",
-            body: "Hi,\n\nThank you for registering on our platform!\n\n- The Team",
-            attachment: "",
-          }),
-        });
-  
-        console.log("📬 Email response:", res.status, res.statusText);
-  
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          console.error("❌ Email failed:", error);
-        } else {
-          console.log("✅ Email sent successfully");
-        }
-      } catch (e) {
-        console.error("🚨 Error during email sending:", e);
-      }
-  
-      console.log("➡️ Moving to redirect after email");
+    console.log("📨 Attempting to send email to:", email);
+
+    const res = await fetch("http://10.96.232.159:5000/service/send_email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "convertxnoreply@gmail.com",
+        to: email,
+        subject: "Registration Successful",
+        body: "Hi,\n\nThank you for registering on our platform!\n\n- The Team",
+        attachment: null,
+      }),
+    });
+
+    console.log("📬 Email response:", res.status, res.statusText);
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      console.error("❌ Email failed:", error);
+    } else {
+      console.log("✅ Email sent successfully");
+    }
+  } catch (e) {
+    console.error("🚨 Error during email sending:", e);
+  }
+
+  console.log("➡️ Moving to redirect after email");
   return redirect(`${WEBROOT}/login`, 302);
 })
 
