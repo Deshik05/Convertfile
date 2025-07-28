@@ -17,7 +17,21 @@ export const convert = new Elysia().use(userService).post(
     }
 
     const user = await jwt.verify(auth.value);
-    if (!user) {
+
+    if (!user || typeof user === "boolean") {
+      return redirect(`${WEBROOT}/login`, 302);
+    }
+
+    const userRecord = db
+      .query("SELECT is_premium FROM users WHERE id = ?")
+      .get(user.id);
+
+    if (!userRecord) {
+      return redirect(`${WEBROOT}/login`, 302);
+    }
+
+    const userWithPremium = { ...user, is_premium: userRecord.is_premium };
+    if (!userWithPremium) {
       return redirect(`${WEBROOT}/login`, 302);
     }
 
@@ -56,7 +70,7 @@ export const convert = new Elysia().use(userService).post(
     }
 
     // ✨ Check if Tesseract and User is Not Premium
-    if (converterName === "tesseract" && user.role !== "premium") {
+    if (converterName === "tesseract" && userWithPremium.is_premium !== 1) {
       set.status = 403;
       return "Tesseract conversion is available only for premium users.";
     }
