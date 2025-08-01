@@ -191,10 +191,12 @@ export const user = new Elysia()
     }
 
     if (isPremium === "true") {
-      // Redirect to payment gateway with return URL
-      const payUrl = `https://payment-gateway-frontend-chi.vercel.app/payment/deshik@paygate/100?returnUrl=http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
-      return redirect(payUrl, 302);
-    }
+  const amount = 100;
+  const returnUrl = `http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
+  const payUrl = `http://192.168.162.9:3001/payment/bubalan28@gmail.com/bubalans@paygate/${amount}?returnUrl=${encodeURIComponent(returnUrl)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
+  return redirect(payUrl, 302);
+}
+
 
     // Non-premium user: register immediately
     const savedPassword = await Bun.password.hash(password);
@@ -223,34 +225,34 @@ export const user = new Elysia()
   const savedPassword = await Bun.password.hash(password);
   db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 1)").run(email, savedPassword);
 
-  try {
-    console.log("📨 Attempting to send email to:", email);
+  // try {
+  //   console.log("📨 Attempting to send email to:", email);
 
-    const res = await fetch("http://10.96.232.159:5000/service/send_email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "convertxnoreply@gmail.com",
-        to: email,
-        subject: "Registration Successful",
-        body: "Hi,\n\nThank you for registering on our platform!\n\n- The Team",
-        attachment: null,
-      }),
-    });
+  //   const res = await fetch("http://10.96.232.159:5000/service/send_email", {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({
+  //       from: "convertxnoreply@gmail.com",
+  //       to: email,
+  //       subject: "Registration Successful",
+  //       body: "Hi,\n\nThank you for registering on our platform!\n\n- The Team",
+  //       attachment: null,
+  //     }),
+  //   });
 
-    console.log("📬 Email response:", res.status, res.statusText);
+  //   console.log("📬 Email response:", res.status, res.statusText);
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({}));
-      console.error("❌ Email failed:", error);
-    } else {
-      console.log("✅ Email sent successfully");
-    }
-  } catch (e) {
-    console.error("🚨 Error during email sending:", e);
-  }
+  //   if (!res.ok) {
+  //     const error = await res.json().catch(() => ({}));
+  //     console.error("❌ Email failed:", error);
+  //   } else {
+  //     console.log("✅ Email sent successfully");
+  //   }
+  // } catch (e) {
+  //   console.error("🚨 Error during email sending:", e);
+  // }
 
   console.log("➡️ Moving to redirect after email");
   return redirect(`${WEBROOT}/login`, 302);
