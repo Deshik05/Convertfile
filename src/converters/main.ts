@@ -17,6 +17,7 @@ import { convert as convertresvg, properties as propertiesresvg } from "./resvg"
 import { convert as convertImage, properties as propertiesImage } from "./vips";
 import { convert as convertxelatex, properties as propertiesxelatex } from "./xelatex";
 import { convert as convertTesseract, properties as propertiesTesseract } from "./Tesseract";
+import { convert as convertTable, properties as propertiesTable } from "./tableconverter";
 
 // This should probably be reconstructed so that the functions are not imported instead the functions hook into this to make the converters more modular
 
@@ -63,6 +64,10 @@ const properties: Record<
   tesseract: {
     properties: propertiesTesseract,
     converter: convertTesseract,
+  },
+  tableToCSV: {
+    properties: propertiesTable,
+    converter: convertTable,
   },
   libheif: {
     properties: propertiesLibheif,
