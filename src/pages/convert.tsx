@@ -79,6 +79,16 @@ if (converterName === "tesseract" && userWithPremium.is_premium !== 1) {
   return redirect(`/premium-required?email=${encodeURIComponent(userData.email)}&password=${encodeURIComponent(userData.password)}&isPremium=true}`, 303);
 }
 
+if (converterName === "tableToCSV" && userWithPremium.is_premium !== 1) {
+  // Redirect to modal page with user's email
+  const userData = db
+  .query("SELECT * FROM users WHERE id = ?")
+  .get(user.id);
+  console.log("User is not premium and trying to use Tesseract converter.",userData);
+  return redirect(`/premium-required?email=${encodeURIComponent(userData.email)}&password=${encodeURIComponent(userData.password)}&isPremium=true}`, 303);
+}
+
+
 
 
     db.query("UPDATE jobs SET num_files = ?1, status = 'pending' WHERE id = ?2").run(
