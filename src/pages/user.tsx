@@ -6,6 +6,8 @@ import { BaseHtml } from "../components/base";
 import { Header } from "../components/header";
 import db from "../db/db";
 import { User } from "../db/types";
+import CryptoJS from "crypto-js";
+
 import {
   ACCOUNT_REGISTRATION,
   ALLOW_UNAUTHENTICATED,
@@ -179,10 +181,125 @@ export const user = new Elysia()
 })
 
 
+// .post(
+//   "/register",
+//   async ({ body, set, redirect }) => {
+//     const { email, password, isPremium } = body;
+
+//     // Prevent duplicate registration (extra guard)
+//     const existingUser = db.query("SELECT * FROM users WHERE email = ?").get(email);
+//     if (existingUser) {
+//       set.status = 400;
+//       return { message: "Email already in use." };
+//     }
+
+//     if (isPremium === "true") {
+//       // Premium flow — redirect to payment gateway
+//       const amount = 100;
+//       const payload = {
+//         email: "thabitha@gmail.com",
+//         code: "thabitha@paygate",
+//         amount: amount
+//       };
+
+//       const encoded = encodeURIComponent(btoa(JSON.stringify(payload)));
+//       const returnUrl = `http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
+//       const payUrl = `http://192.168.161.133:3000/payment/${encoded}?returnUrl=${encodeURIComponent(returnUrl)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
+//       return redirect(payUrl, 302);
+//     }
+
+//     // Non-premium user — register immediately
+//     try {
+//       const savedPassword = await Bun.password.hash(password);
+//       db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 0)").run(email, savedPassword);
+//     } catch (err: any) {
+//       if (err.message.includes("UNIQUE constraint failed")) {
+//         set.status = 400;
+//         return { message: "Email already in use." };
+//       }
+//       throw err;
+//     }
+
+//     return redirect(`${WEBROOT}/login`, 302);
+//   },
+//   {
+//     body: t.Object({
+//       email: t.String(),
+//       password: t.String(),
+//       isPremium: t.Optional(t.String()),
+//     }),
+//   }
+// )
+
+// .get("/register/premium-success", async ({ query, redirect, set }) => {
+//   try {
+//     const { data } = query as { data?: string };
+//     console.log("Received payment data:", data);
+//     if (!data) {
+//       set.status = 400;
+//       return { message: "Missing payment data." };
+//     }
+
+//     // Decrypt the payment details
+//     const secretKey = "12345678901234567890123456789012!"; // must match payment gateway encryption key
+//     let email: string, password: string;
+
+//     try {
+//       console.log("hiii")
+//       const bytes = CryptoJS.AES.decrypt(decodeURIComponent(data), secretKey);
+//       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+
+//       if (!decrypted) {
+//         throw new Error("Decryption failed or returned empty string");
+//       }
+
+//       const details = JSON.parse(decrypted);
+//       console.log("Decrypted payment details:", details);
+//       email = details.email;
+//       password = details.password;
+//     } catch (err) {
+//       console.error("❌ Failed to decrypt payment data", err);
+//       set.status = 400;
+//       return { message: "Invalid or corrupted payment data." };
+//     }
+
+//     // Prevent duplicates
+//     const existingUser = db.query("SELECT * FROM users WHERE email = ?").get(email);
+//     if (existingUser) {
+//       return redirect(`${WEBROOT}/login`, 302);
+//     }
+
+//     // Insert premium user
+//     try {
+//       const savedPassword = await Bun.password.hash(password);
+//       db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 1)").run(email, savedPassword);
+//     } catch (err: any) {
+//       if (err.message.includes("UNIQUE constraint failed")) {
+//         return redirect(`${WEBROOT}/login`, 302);
+//       }
+//       throw err;
+//     }
+
+//     console.log("✅ Premium user registration successful");
+//     return redirect(`${WEBROOT}/login`, 302);
+
+//   } catch (err) {
+//     console.error("🚨 Error in premium-success handler", err);
+//     set.status = 500;
+//     return { message: "Internal server error." };
+//   }
+// })
+
 .post(
   "/register",
   async ({ body, set, redirect }) => {
     const { email, password, isPremium } = body;
+
+    // Validate input
+    if (!email || !password) {
+      set.status = 400;
+      return { message: "Email and password are required." };
+    }
 
     // Prevent duplicate registration (extra guard)
     const existingUser = db.query("SELECT * FROM users WHERE email = ?").get(email);
@@ -202,7 +319,7 @@ export const user = new Elysia()
 
       const encoded = encodeURIComponent(btoa(JSON.stringify(payload)));
       const returnUrl = `http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
-      const payUrl = `http://172.22.150.21:3001/payment/${encoded}?returnUrl=${encodeURIComponent(returnUrl)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
+      const payUrl = `http://192.168.161.133:3000/payment/${encoded}?returnUrl=${encodeURIComponent(returnUrl)}`;
       return redirect(payUrl, 302);
     }
 
@@ -230,28 +347,60 @@ export const user = new Elysia()
 )
 
 .get("/register/premium-success", async ({ query, redirect, set }) => {
-  const { email, password } = query as { email: string; password: string };
-
-  // Check again before insert to prevent duplicates
-  const existingUser = db.query("SELECT * FROM users WHERE email = ?").get(email);
-  if (existingUser) {
-    // Already registered, just redirect
-    return redirect(`${WEBROOT}/login`, 302);
-  }
-
   try {
-    const savedPassword = await Bun.password.hash(password);
-    db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 1)").run(email, savedPassword);
-  } catch (err: any) {
-    if (err.message.includes("UNIQUE constraint failed")) {
+    const { email, password, data } = query as { email?: string; password?: string; data?: string };
+
+    // Ensure email and password are coming from register endpoint
+    if (!email || !password) {
+      set.status = 400;
+      return { message: "Missing email or password from registration." };
+    }
+
+    if (data) {
+      // Just log payment details — not using them for email/password
+      try {
+        const secretKey = "12345678901234567890123456789012!";
+        const bytes = CryptoJS.AES.decrypt(decodeURIComponent(data), secretKey);
+        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+
+        if (decrypted) {
+          console.log("Decrypted payment details:", JSON.parse(decrypted));
+        } else {
+          console.warn("Payment data decryption returned empty string");
+        }
+      } catch (err) {
+        console.error("❌ Failed to decrypt payment data", err);
+      }
+    }
+
+    // Prevent duplicates
+    const existingUser = db.query("SELECT * FROM users WHERE email = ?").get(email);
+    if (existingUser) {
       return redirect(`${WEBROOT}/login`, 302);
     }
-    throw err;
-  }
 
-  console.log("➡️ Moving to redirect after email");
-  return redirect(`${WEBROOT}/login`, 302);
+    // Insert premium user
+    try {
+      const savedPassword = await Bun.password.hash(password);
+      db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 1)").run(email, savedPassword);
+    } catch (err: any) {
+      if (err.message.includes("UNIQUE constraint failed")) {
+        return redirect(`${WEBROOT}/login`, 302);
+      }
+      throw err;
+    }
+
+    console.log("✅ Premium user registration successful");
+    return redirect(`${WEBROOT}/login`, 302);
+
+  } catch (err) {
+    console.error("🚨 Error in premium-success handler", err);
+    set.status = 500;
+    return { message: "Internal server error." };
+  }
 })
+
+
 
 
 
