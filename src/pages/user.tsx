@@ -7,7 +7,7 @@ import { Header } from "../components/header";
 import db from "../db/db";
 import { User } from "../db/types";
 import CryptoJS from "crypto-js";
-
+import { createCipheriv, pbkdf2Sync, randomBytes } from "crypto";
 import {
   ACCOUNT_REGISTRATION,
   ALLOW_UNAUTHENTICATED,
@@ -121,6 +121,9 @@ export const user = new Elysia()
       </BaseHtml>
     );
   })
+
+
+  
  .get("/register", ({ redirect }) => {
   if (!ACCOUNT_REGISTRATION) {
     return redirect(`${WEBROOT}/login`, 302);
@@ -334,6 +337,8 @@ export const user = new Elysia()
       }
       throw err;
     }
+  
+
 
     return redirect(`${WEBROOT}/login`, 302);
   },
@@ -388,6 +393,14 @@ export const user = new Elysia()
         return redirect(`${WEBROOT}/login`, 302);
       }
       throw err;
+    }
+
+    try {
+      await sendRegistrationEmail(email);
+      console.log("📧 Registration success email sent to", email);
+    } catch (err) {
+      console.error("❌ Failed to send registration email", err);
+      // proceed with redirect anyway
     }
 
     console.log("✅ Premium user registration successful");
@@ -683,3 +696,103 @@ export const user = new Elysia()
       }),
     },
   );
+
+
+  
+  
+  // === Helper to send the registration email via the service ===
+ // src/pages/user.tsx
+// src/pages/user.tsx
+
+// src/pages/user.tsx
+
+export async function sendRegistrationEmail(toEmail: string) {
+  try {
+    // 1️⃣ Prepare the plain payload
+    const payload = {
+      from: "admin@convertx.com",
+      to: toEmail,
+      subject: "Premium Registration Successful",
+      body: "Welcome to ConvertX Premium! Your account has been successfully registered.",
+      attachment: null,
+    };
+
+    console.log("📩 Sending payload to email service:", payload);
+
+    // 2️⃣ Send to email service
+    const emailRes = await fetch("http://192.168.167.21:5000/service/send_email", {
+      method: "POST",
+      headers: {
+        "X-API-KEY": "0898c79d9edee1eaf79e1f97718ea84da47472f70884944ba1641b58ed24796c",
+        "X-CLIENT-SECRET": "default_password", // as per API doc
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload), // ✅ plain JSON payload
+    });
+
+    if (!emailRes.ok) {
+      const text = await emailRes.text();
+      throw new Error(`Email service HTTP ${emailRes.status} ${emailRes.statusText} — ${text}`);
+    }
+
+    console.log(`✅ Registration email sent successfully to ${toEmail}`);
+
+  } catch (err) {
+    console.error(`❌ Failed to send registration email: ${(err as Error).message}`);
+    throw err;
+  }
+}
+
+
+// export async function sendRegistrationEmail(toEmail: string) {
+//   try {
+//     // 1️⃣ Get encrypted data from Python encryption service
+//     const pythonRes = await fetch("http://localhost:8001/encrypt", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({
+//         from: "admin@convertx.com",
+//         to: toEmail, // recipient email
+//         subject: "Premium Registration Successful",
+//         body: "Welcome to ConvertX Premium! Your account has been successfully registered.",
+//         attachment: null,
+//       }),
+//     });
+
+//     if (!pythonRes.ok) {
+//       const text = await pythonRes.text();
+//       throw new Error(`Python encryption service failed: ${text}`);
+//     }
+
+//     const { encrypted_data } = await pythonRes.json();
+
+//     console.log("✅ Encrypted data received from Python service:");
+//     console.log(encrypted_data.slice(0, 80) + "..."); // first 80 chars
+
+//     // 2️⃣ Send encrypted data to email service
+//     const emailRes = await fetch("http://192.168.167.21:5000/service/send_email", {
+//       method: "POST",
+//       headers: {
+//         "X-API-KEY": "0898c79d9edee1eaf79e1f97718ea84da47472f70884944ba1641b58ed24796c",
+//         "X-CLIENT-SECRET": "gAAAAABonA9zwb5czJZn67Y_NxoSNwY_6ihKZKih0C-twIogBVBZFrBII9w_W9CYKFfCvkdeQsMsFEGvgIzmItAZnQiXZhiwMwG7oi1uUFrtedN54hEwzNKcHkvMKJqIgBdEyaF3DB0D",
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({ encrypted_data }), // ✅ ONLY encrypted_data
+//     });
+
+//     if (!emailRes.ok) {
+//       const text = await emailRes.text();
+//       throw new Error(`Email service HTTP ${emailRes.status} ${emailRes.statusText} — ${text}`);
+//     }
+
+//     console.log(`✅ Registration email sent successfully to ${toEmail}`);
+
+//   } catch (err) {
+//     console.error(`❌ Failed to send registration email: ${(err as Error).message}`);
+//     throw err; // rethrow if you want upstream handling
+//   }
+// }
+
+  
+  
+
