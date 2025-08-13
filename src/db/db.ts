@@ -17,7 +17,7 @@ if (!hasTables) {
   db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
   is_premium INTEGER DEFAULT 0
 );

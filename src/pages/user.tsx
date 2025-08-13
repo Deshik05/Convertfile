@@ -184,23 +184,39 @@ export const user = new Elysia()
   async ({ body, set, redirect }) => {
     const { email, password, isPremium } = body;
 
-    const existingUser = await db.query("SELECT * FROM users WHERE email = ?").get(email);
+    // Prevent duplicate registration (extra guard)
+    const existingUser = db.query("SELECT * FROM users WHERE email = ?").get(email);
     if (existingUser) {
       set.status = 400;
       return { message: "Email already in use." };
     }
 
     if (isPremium === "true") {
-  const amount = 100;
-  const returnUrl = `http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
-  const payUrl = `http://192.168.162.9:3001/payment/bubalan28@gmail.com/bubalans@paygate/${amount}?returnUrl=${encodeURIComponent(returnUrl)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
-  return redirect(payUrl, 302);
-}
+      // Premium flow — redirect to payment gateway
+      const amount = 100;
+      const payload = {
+        email: "thabitha@gmail.com",
+        code: "thabitha@paygate",
+        amount: amount
+      };
 
+      const encoded = encodeURIComponent(btoa(JSON.stringify(payload)));
+      const returnUrl = `http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
+      const payUrl = `http://172.22.150.21:3001/payment/${encoded}?returnUrl=${encodeURIComponent(returnUrl)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
+      return redirect(payUrl, 302);
+    }
 
-    // Non-premium user: register immediately
-    const savedPassword = await Bun.password.hash(password);
-    db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 0)").run(email, savedPassword);
+    // Non-premium user — register immediately
+    try {
+      const savedPassword = await Bun.password.hash(password);
+      db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 0)").run(email, savedPassword);
+    } catch (err: any) {
+      if (err.message.includes("UNIQUE constraint failed")) {
+        set.status = 400;
+        return { message: "Email already in use." };
+      }
+      throw err;
+    }
 
     return redirect(`${WEBROOT}/login`, 302);
   },
@@ -216,47 +232,27 @@ export const user = new Elysia()
 .get("/register/premium-success", async ({ query, redirect, set }) => {
   const { email, password } = query as { email: string; password: string };
 
-  const existingUser = await db.query("SELECT * FROM users WHERE email = ?").get(email);
+  // Check again before insert to prevent duplicates
+  const existingUser = db.query("SELECT * FROM users WHERE email = ?").get(email);
   if (existingUser) {
-    set.status = 400;
-    return { message: "User already registered." };
+    // Already registered, just redirect
+    return redirect(`${WEBROOT}/login`, 302);
   }
 
-  const savedPassword = await Bun.password.hash(password);
-  db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 1)").run(email, savedPassword);
-
-  // try {
-  //   console.log("📨 Attempting to send email to:", email);
-
-  //   const res = await fetch("http://10.96.232.159:5000/service/send_email", {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //     body: JSON.stringify({
-  //       from: "convertxnoreply@gmail.com",
-  //       to: email,
-  //       subject: "Registration Successful",
-  //       body: "Hi,\n\nThank you for registering on our platform!\n\n- The Team",
-  //       attachment: null,
-  //     }),
-  //   });
-
-  //   console.log("📬 Email response:", res.status, res.statusText);
-
-  //   if (!res.ok) {
-  //     const error = await res.json().catch(() => ({}));
-  //     console.error("❌ Email failed:", error);
-  //   } else {
-  //     console.log("✅ Email sent successfully");
-  //   }
-  // } catch (e) {
-  //   console.error("🚨 Error during email sending:", e);
-  // }
+  try {
+    const savedPassword = await Bun.password.hash(password);
+    db.query("INSERT INTO users (email, password, is_premium) VALUES (?, ?, 1)").run(email, savedPassword);
+  } catch (err: any) {
+    if (err.message.includes("UNIQUE constraint failed")) {
+      return redirect(`${WEBROOT}/login`, 302);
+    }
+    throw err;
+  }
 
   console.log("➡️ Moving to redirect after email");
   return redirect(`${WEBROOT}/login`, 302);
 })
+
 
 
   .get("/login", async ({ jwt, redirect, cookie: { auth } }) => {
