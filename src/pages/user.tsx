@@ -381,6 +381,8 @@ export const user = new Elysia()
     // Prevent duplicates
     const existingUser = db.query("SELECT * FROM users WHERE email = ?").get(email);
     if (existingUser) {
+      db.query("UPDATE users SET is_premium = 1 WHERE email = ?").run(email);
+      console.log("✅ Existing user upgraded to premium");
       return redirect(`${WEBROOT}/login`, 302);
     }
 
