@@ -315,8 +315,8 @@ export const user = new Elysia()
       // Premium flow — redirect to payment gateway
       const amount = 100;
       const payload = {
-        email: "thabitha@gmail.com",
-        code: "thabitha@paygate",
+        email: "admin@convertx.com",
+        code: "deshik@paygate",
         amount: amount
       };
 
@@ -354,7 +354,7 @@ export const user = new Elysia()
 .get("/register/premium-success", async ({ query, redirect, set }) => {
   try {
     const { email, password, data } = query as { email?: string; password?: string; data?: string };
-
+    console.log("Received payment data:", password, email, data);
     // Ensure email and password are coming from register endpoint
     if (!email || !password) {
       set.status = 400;

@@ -3,17 +3,18 @@ import { Html } from "@elysiajs/html";
 
 export const premiumPage = new Elysia().get("/premium-required", ({ query }) => {
   const email = query.email || "";
-
+  const password= query.password || "";
+console.log("Email:", email);
   // Build the payment URL
   const payload = {
-    email: "thabitha@gmail.com",
-    code: "thabitha@paygate",
+    email: "admin@convertx.com",
+    code: "deshik@paygate",
     amount: 100
   };
   const encoded = encodeURIComponent(btoa(JSON.stringify(payload)));
-  const returnUrl = `http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&isPremium=true`;
+  const returnUrl = `http://localhost:3000/register/premium-success?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&isPremium=true`;
   const payUrl = `http://192.168.161.133:3000/payment/${encoded}?returnUrl=${encodeURIComponent(returnUrl)}`;
-
+  
   return (
     <>
       <div class="min-h-screen flex items-center justify-center bg-gray-100">

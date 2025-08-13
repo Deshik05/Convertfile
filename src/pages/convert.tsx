@@ -72,7 +72,11 @@ export const convert = new Elysia().use(userService).post(
     // ✨ Check if Tesseract and User is Not Premium
 if (converterName === "tesseract" && userWithPremium.is_premium !== 1) {
   // Redirect to modal page with user's email
-  return redirect(`/premium-required?email=${encodeURIComponent(userWithPremium.email)}`, 303);
+  const userData = db
+  .query("SELECT * FROM users WHERE id = ?")
+  .get(user.id);
+  console.log("User is not premium and trying to use Tesseract converter.",userData);
+  return redirect(`/premium-required?email=${encodeURIComponent(userData.email)}&password=${encodeURIComponent(userData.password)}&isPremium=true}`, 303);
 }
 
 
