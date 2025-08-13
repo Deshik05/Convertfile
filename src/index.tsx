@@ -17,7 +17,7 @@ import { results } from "./pages/results";
 import { root } from "./pages/root";
 import { upload } from "./pages/upload";
 import { user } from "./pages/user";
-
+import { premiumPage } from "./pages/modal";
 mkdir("./data", { recursive: true }).catch(console.error);
 
 export const uploadsDir = "./data/uploads/";
@@ -46,6 +46,7 @@ const app = new Elysia({
   .use(deleteFile)
   .use(listConverters)
   .use(chooseConverter)
+.use(premiumPage)
   .onError(({ error }) => {
     console.error(error);
   });

@@ -70,10 +70,12 @@ export const convert = new Elysia().use(userService).post(
     }
 
     // ✨ Check if Tesseract and User is Not Premium
-    if (converterName === "tesseract" && userWithPremium.is_premium !== 1) {
-      set.status = 403;
-      return "Tesseract conversion is available only for premium users.";
-    }
+if (converterName === "tesseract" && userWithPremium.is_premium !== 1) {
+  // Redirect to modal page with user's email
+  return redirect(`/premium-required?email=${encodeURIComponent(userWithPremium.email)}`, 303);
+}
+
+
 
     db.query("UPDATE jobs SET num_files = ?1, status = 'pending' WHERE id = ?2").run(
       fileNames.length,
