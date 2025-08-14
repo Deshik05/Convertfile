@@ -17,28 +17,29 @@ console.log("Email:", email);
   
   return (
     <>
-      <div class="min-h-screen flex items-center justify-center bg-gray-100">
-        <div class="bg-white p-8 rounded shadow-lg text-center max-w-md">
-          <h1 class="text-2xl font-bold mb-4">Upgrade Required</h1>
-          <p class="mb-6">
-            Tesseract OCR is a premium feature. Register as premium to use this functionality.
-          </p>
-          <div class="flex justify-center gap-2">
-            <button
-              class="bg-blue-600 text-white px-4 py-2 rounded"
-              onclick={`window.location.href='${payUrl}'`}
-            >
-              Register as Premium
-            </button>
-            <button
-              class="bg-gray-300 px-4 py-2 rounded"
-              onclick="window.history.back()"
-            >
-              Go Back
-            </button>
-          </div>
-        </div>
-      </div>
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f3f4f6;">
+  <div style="background-color: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center; max-width: 400px; width: 100%;">
+    <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 16px; color: #111827;">Upgrade Required</h1>
+    <p style="margin-bottom: 24px; color: #374151; line-height: 1.5;">
+      Tesseract OCR is a premium feature. Register as premium to use this functionality.
+    </p>
+    <div style="display: flex; justify-content: center; gap: 12px;">
+      <button
+        style="background-color: #2563eb; color: #ffffff; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+        onclick={`window.location.href='${payUrl}'`}
+      >
+        Register as Premium
+      </button>
+      <button
+        style="background-color: #d1d5db; color: #111827; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+        onclick="window.history.back()"
+      >
+        Go Back
+      </button>
+    </div>
+  </div>
+</div>
+
     </>
   );
 });
