@@ -1,3 +1,4 @@
+
 const webroot = document.querySelector("meta[name='webroot']").content;
 const fileInput = document.querySelector('input[type="file"]');
 const dropZone = document.getElementById("dropzone");
@@ -66,6 +67,8 @@ function handleFile(file) {
   fileList.appendChild(row);
   file.htmlRow = row;
   fileNames.push(file.name);
+
+ 
   uploadFile(file);
 }
 
@@ -196,20 +199,26 @@ const deleteRow = (target) => {
   }).catch((err) => console.log(err));
 };
 
-const uploadFile = (file) => {
+const uploadFile = (file, jobId) => {
   convertButton.disabled = true;
   convertButton.textContent = "Uploading...";
   pendingFiles += 1;
 
   const formData = new FormData();
   formData.append("file", file, file.name);
-
+  formData.append("jobId", jobId);   // 🔑 include jobId in request body
+console.log("Uploading file with jobId:", jobId);
   let xhr = new XMLHttpRequest();
-
   xhr.open("POST", `${webroot}/upload`, true);
 
   xhr.onload = () => {
-    let data = JSON.parse(xhr.responseText);
+    let data;
+    try {
+      data = JSON.parse(xhr.responseText);
+    } catch (err) {
+      console.error("Invalid JSON response:", xhr.responseText);
+      return;
+    }
 
     pendingFiles -= 1;
     if (pendingFiles === 0) {
@@ -219,7 +228,7 @@ const uploadFile = (file) => {
       convertButton.textContent = "Convert";
     }
 
-    //Remove the progress bar when upload is done
+    // Remove the progress bar when upload is done
     let progressbar = file.htmlRow.getElementsByTagName("progress");
     progressbar[0].parentElement.remove();
     console.log(data);

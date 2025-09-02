@@ -531,10 +531,12 @@ export const user = new Elysia()
       auth.set({
         value: accessToken,
         httpOnly: true,
-        secure: !HTTP_ALLOWED,
-        maxAge: 60 * 60 * 24 * 7,
-        sameSite: "strict",
+        secure: false,
+        maxAge: 24 * 60 * 60,
+        sameSite: "lax",
+        path: "/",
       });
+      
 
       return redirect(`${WEBROOT}/`, 302);
     },

@@ -50,10 +50,13 @@ export const root = new Elysia()
       auth.set({
         value: accessToken,
         httpOnly: true,
-        secure: !HTTP_ALLOWED,
+        secure: false,
         maxAge: 24 * 60 * 60,
-        sameSite: "strict",
+        sameSite: "lax",
+        path: "/",
       });
+      
+      
     } else if (auth?.value) {
       user = await jwt.verify(auth.value);
 

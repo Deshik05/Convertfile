@@ -5,7 +5,7 @@ import { outputDir, uploadsDir } from "..";
 import { mainConverter } from "../converters/main";
 import db from "../db/db";
 import { Jobs } from "../db/types";
-import { WEBROOT } from "../helpers/env";
+import { HTTP_ALLOWED, WEBROOT } from "../helpers/env";
 import { normalizeFiletype, normalizeOutputFiletype } from "../helpers/normalizeFiletype";
 import { userService } from "./user";
 
@@ -36,6 +36,24 @@ export const convert = new Elysia().use(userService).post(
     }
 
     if (!jobId?.value) {
+      const { id } = db
+      .query("SELECT id FROM jobs WHERE user_id = ? ORDER BY id DESC")
+      .get(user.id) as { id: string };
+
+    if (!jobId) {
+      return { message: "Cookies should be enabled to use this app." };
+    }
+
+    jobId.set({
+      value: id,
+      httpOnly: true,
+      secure: !HTTP_ALLOWED,
+      maxAge: 24 * 60 * 60,
+      sameSite: "strict",
+    });
+    }
+
+    if (!jobId.value) {
       return redirect(`${WEBROOT}/`, 302);
     }
 
