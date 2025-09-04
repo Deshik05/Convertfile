@@ -18,6 +18,8 @@ import { root } from "./pages/root";
 import { upload } from "./pages/upload";
 import { user } from "./pages/user";
 import { premiumPage } from "./pages/modal";
+
+import { metrics } from "./helpers/metrics";
 mkdir("./data", { recursive: true }).catch(console.error);
 
 export const uploadsDir = "./data/uploads/";
@@ -61,6 +63,101 @@ if (process.env.NODE_ENV !== "production") {
     });
   });
 }
+
+app.get("/metrics", () => {
+  return metrics;  // return the object
+});
+
+app.get("/dashboard", () => `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Server Dashboard</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+    .card { background: white; padding: 20px; margin: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,.2);}
+    #traffic { height: 200px; width: 100%; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eee; }
+  </style>
+</head>
+<body>
+  <h1>Server Dashboard</h1>
+
+  <div class="card">
+    <h2>Requests</h2>
+    <p id="total"></p>
+    <p id="active"></p>
+    <p id="completed"></p>
+    <p id="errors"></p>
+    <p id="avgTime"></p>
+  </div>
+
+  <div class="card">
+    <h2>Traffic (per minute)</h2>
+    <canvas id="traffic"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>System</h2>
+    <p id="cpu"></p>
+    <p id="mem"></p>
+  </div>
+
+  <div class="card">
+    <h2>Per-User Requests</h2>
+    <table id="userTable">
+      <thead>
+        <tr><th>User</th><th>Requests</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    async function refresh() {
+      const res = await fetch('/metrics');
+      const data = await res.json();
+
+      document.getElementById('total').innerText = "Total: " + data.totalRequests;
+      document.getElementById('active').innerText = "Active: " + data.activeRequests;
+      document.getElementById('completed').innerText = "Completed: " + data.completedRequests;
+      document.getElementById('errors').innerText = "Errors: " + data.errors;
+      document.getElementById('avgTime').innerText = "Avg Job Time: " + data.avgJobTime.toFixed(2) + " ms";
+
+      document.getElementById('cpu').innerText = "CPU Load: " + data.system.loadavg.join(", ");
+      document.getElementById('mem').innerText = "Memory: " + (data.system.mem.free/1e6).toFixed(0) + " MB free / " + (data.system.mem.total/1e6).toFixed(0) + " MB total";
+
+      // update traffic chart
+      trafficChart.data.labels = data.perMinute.map(p => new Date(p.time).toLocaleTimeString());
+      trafficChart.data.datasets[0].data = data.perMinute.map(p => p.count);
+      trafficChart.update();
+
+      // update per-user table
+      const tbody = document.querySelector("#userTable tbody");
+      tbody.innerHTML = "";
+      Object.entries(data.perUser).forEach(([user, count]) => {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td>" + user + "</td><td>" + count + "</td>";
+        tbody.appendChild(row);
+      });
+    }
+
+    const ctx = document.getElementById('traffic').getContext('2d');
+    const trafficChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'Requests per Minute', data: [] }] }
+    });
+
+    setInterval(refresh, 5000);
+    refresh();
+  </script>
+</body>
+</html>
+`);
+
 
 app.listen(3000);
 
