@@ -129,7 +129,14 @@ app.get("/dashboard", () => `
     <h2>Recent Jobs</h2>
     <table id="jobTable">
       <thead>
-        <tr><th>Job ID</th><th>Queue Time (ms)</th><th>Convert Time (ms)</th><th>Bandwidth (KB)</th></tr>
+        <tr>
+          <th>Job ID</th>
+          <th>Queue Time (ms)</th>
+          <th>Convert Time (ms)</th>
+          <th>Bandwidth (KB)</th>
+          <th>Completed At</th>
+          <th>MAC Address</th>
+        </tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -178,7 +185,9 @@ app.get("/dashboard", () => `
           "<td>" + job.jobId + "</td>" +
           "<td>" + job.queueTime + "</td>" +
           "<td>" + job.convertTime + "</td>" +
-          "<td>" + (job.bandwidth/1024).toFixed(2) + "</td>";
+          "<td>" + (job.bandwidth/1024).toFixed(2) + "</td>" +
+          "<td>" + new Date(job.time).toLocaleString() + "</td>" +
+          "<td>" + (job.mac || "unknown") + "</td>";
         jobTbody.appendChild(row);
       });
     }

@@ -14,6 +14,20 @@ import {
   recordCompletion,
   recordError
 } from "../helpers/metrics";
+import os from "os";
+
+function getServerMAC(): string {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]!) {
+      if (!net.internal && net.mac && net.mac !== "00:00:00:00:00:00") {
+        return net.mac;
+      }
+    }
+  }
+  return "unknown";
+}
+
 
 // ✅ Improved IP extraction with case-insensitive header lookup
 function getClientIP(request: Request): string {
@@ -68,6 +82,7 @@ export const convert = new Elysia()
     "/convert",
     async ({ body, redirect, jwt, request, headers, cookie: { auth, jobId }, set, server }) => {
       const requestReceived = Date.now();
+
 
       // ✅ Enhanced IP detection with multiple methods
       let ip = "127.0.0.1";
@@ -297,6 +312,8 @@ export const convert = new Elysia()
           queueTime,
           convertTime,
           bandwidth: totalBandwidth,
+          time: Date.now(),       // ⏱️ time logging
+          mac: getServerMAC()     // 💻 MAC address
         });
 
         return redirect(`${WEBROOT}/results/${jobId.value}`, 302);
