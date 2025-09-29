@@ -115,6 +115,26 @@ app.get("/dashboard", () => `
     </table>
   </div>
 
+  <div class="card">
+    <h2>Per-IP Requests</h2>
+    <table id="ipTable">
+      <thead>
+        <tr><th>IP</th><th>Requests</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Recent Jobs</h2>
+    <table id="jobTable">
+      <thead>
+        <tr><th>Job ID</th><th>Queue Time (ms)</th><th>Convert Time (ms)</th><th>Bandwidth (KB)</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     async function refresh() {
@@ -130,18 +150,36 @@ app.get("/dashboard", () => `
       document.getElementById('cpu').innerText = "CPU Load: " + data.system.loadavg.join(", ");
       document.getElementById('mem').innerText = "Memory: " + (data.system.mem.free/1e6).toFixed(0) + " MB free / " + (data.system.mem.total/1e6).toFixed(0) + " MB total";
 
-      // update traffic chart
       trafficChart.data.labels = data.perMinute.map(p => new Date(p.time).toLocaleTimeString());
       trafficChart.data.datasets[0].data = data.perMinute.map(p => p.count);
       trafficChart.update();
 
-      // update per-user table
       const tbody = document.querySelector("#userTable tbody");
       tbody.innerHTML = "";
       Object.entries(data.perUser).forEach(([user, count]) => {
         const row = document.createElement("tr");
         row.innerHTML = "<td>" + user + "</td><td>" + count + "</td>";
         tbody.appendChild(row);
+      });
+
+      const ipTbody = document.querySelector("#ipTable tbody");
+      ipTbody.innerHTML = "";
+      Object.entries(data.perIp).forEach(([ip, count]) => {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td>" + ip + "</td><td>" + count + "</td>";
+        ipTbody.appendChild(row);
+      });
+
+      const jobTbody = document.querySelector("#jobTable tbody");
+      jobTbody.innerHTML = "";
+      data.jobs.forEach(job => {
+        const row = document.createElement("tr");
+        row.innerHTML =
+          "<td>" + job.jobId + "</td>" +
+          "<td>" + job.queueTime + "</td>" +
+          "<td>" + job.convertTime + "</td>" +
+          "<td>" + (job.bandwidth/1024).toFixed(2) + "</td>";
+        jobTbody.appendChild(row);
       });
     }
 
@@ -157,6 +195,8 @@ app.get("/dashboard", () => `
 </body>
 </html>
 `);
+
+
 
 
 app.listen(3000);
